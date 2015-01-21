@@ -11,8 +11,8 @@ use Dancer2;
 set serializer => 'JSON';
 
 my $BOARD = DxGame::Board->new;
-my %HANDS;
 my $DECK = DxGAme::Deck->new;
+my %USERS;
 
 get '/' => sub {
     300 => 'Not valid. Try getting board.';
@@ -57,7 +57,7 @@ put '/board/card/:id' => sub {
             else {
                 $BOARD->play_card( $user, $card );
                 if (
-                    $BOARD->cards_have_been_received_from_all_users
+                    $BOARD->has_cards_from_all_players(values %users)
                   )
                 {
                     $BOARD->state = 5;    #waiting for players to make a bet.
@@ -79,7 +79,6 @@ put '/board/card/:id' => sub {
 put '/board/bet/:card_id' => sub {
     my $card  = get_card( param('card_id') );
     my $user  = authenticate();
-    my $BOARD = $GAME{board};
     if ( my $card_id = $BOARD->has_bet_from_user_id( $user->id ) ) {
         error("You have already bet on card $card_id");
     }
@@ -90,18 +89,19 @@ put '/board/bet/:card_id' => sub {
 
 put '/user/:id' => sub {
     my $user_id = param('id');
-    my $BOARD = $GAME{board} //= die "No board";
     if ( $BOARD->state == 1 ) {
+        # First player.
         $BOARD->state = 2;                   #game created;
-        push @{ $GAME{players} }, DxGame::User->new($user_id);
-        $GAME{scores}->{$user_id} = 0;
+        $BOARD->add_player($user_id);
+        $USERS{$user_id} = DxGame::User->new($user_id);
     }
     elsif ( $BOARD->state == 2 ) {
-        push @{ $GAME{players} }, DxGame::User->new($user_id);
-        $GAME{scores}->{$user_id} = 0;
+        # additional player
+        $BOARD->add_player($user_id);
+        $USERS{$user_id} = DxGame::User->new($user_id);
     }
     else {
-        error("Game has already started");
+        error("Too late to join game, game has already started");
     }
     return {};
 };
@@ -109,7 +109,6 @@ put '/user/:id' => sub {
 put '/board/story' => sub {
     my $story = param("story");
     my $user  = authenticate();
-    my $BOARD = $GAME{board};
     if ( $user->is_storyteller ) {
         $BOARD->update_story($story);
     }
@@ -128,7 +127,7 @@ sub _initial_game_state {
 
 sub authenticate {
     my ($user_id) = @_;
-    return $GAME{users}->{$user_id};
+    return $USERS{$user_id};
 }
 
 #sub error {

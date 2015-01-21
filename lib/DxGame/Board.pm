@@ -12,28 +12,21 @@ my %STATES = (
 
 # This is all the public information, and only the public information.
 
-has card_ids => ( # This isn't public :(
-    is     => 'rw',
-    isa    => 'HashRef',
-    traits => [qw<Hash>],
-);
-
-has player_has => (
-    is     => 'rw',
-    isa    => 'HashRef',
-    traits => [qw<Hash>],
-);
+# <<<
 
 has player_ids => (
     is     => 'rw',
     isa    => 'ArrayRef',
     traits => [qw<Array>],
+    handles => {
+        add_player => 'push'
+    },
 );
 
 has state => (
-              is => 'rw',
-              isa => 'Num',
-             );
+    is => 'rw',
+    isa => 'Num',
+);
 
 has scores => (
     is          => 'rw',
@@ -51,9 +44,24 @@ has storyteller_id => (
     isa         => 'Str'
 );
 
+has showing_cards => (
+    is          => 'rw',
+    isa         => 'ArrayRef',
+    traits      => [qw<Array>],
+);
+
+has hidden_card_count => (
+    is          => 'rw',
+    isa         => 'Num',
+    default     => 0,
+);
+
+#>>>
+
 sub summary_as_hashref {
     my ($self) = @_;
-    return { %$self }
+    my %summary = %$self;
+    return \%summary
 }
 
 sub state_description {
@@ -74,11 +82,12 @@ sub has_card_from_user_id {
     return 0;
 }
 
-sub has_cards_from_all_users {
-    for my $user_id ( $self->all_user_ids
-                     ) {
-        $self->
+sub has_cards_from_all_players {
+    my ($self,@players) = @_;
+    for my $player ( @players ) {
+        $player->player_card or return 0
     }
+    return 1;
 }
 
 sub has_bet_from_user_id {

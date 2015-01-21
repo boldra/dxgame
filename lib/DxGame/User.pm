@@ -1,16 +1,25 @@
 package DxGame::User;
 use Moose;
+use DxGame::Card;
 
+#<<<
 has id => (
-    is  => 'ro',
-    isa => 'Str',
+    is          => 'ro',
+    isa         => 'Str',
 );
 
 has hand => (
-    is     => 'rw',
-    isa    => 'ArrayRef',
-    traits => [qw<Array>],
+    is          => 'rw',
+    isa         => 'ArrayRef',
+    traits      => [qw<Array>],
 );
+
+has played_card => (
+    is          => 'rw',
+    isa         => 'Maybe[DxGame::Card]',
+);
+
+#>>>
 
 # This is public, so it's a property of the board.
 #
