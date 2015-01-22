@@ -2,6 +2,7 @@ use Test::Most;
 use Modern::Perl;
 use Plack::Test;
 use HTTP::Request::Common;
+BEGIN { $ENV{DANCER_ENVIRONMENT} = 'testing' }
 use DxGame::Server;
 
 my $APP = DxGame::Server->to_app;
