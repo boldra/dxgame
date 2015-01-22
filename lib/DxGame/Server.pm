@@ -58,7 +58,7 @@ put '/board/card/:id' => sub {
             else {
                 $BOARD->play_card( $user, $card );
                 if (
-                    $BOARD->has_cards_from_all_players(values %users)
+                    $BOARD->has_cards_from_all_players(values %USERS)
                   )
                 {
                     $BOARD->state = 5;    #waiting for players to make a bet.
