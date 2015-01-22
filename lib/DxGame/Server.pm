@@ -3,6 +3,7 @@ use Dancer2;
 use DxGame::Card;
 use DxGame::User;
 use DxGame::Board;
+use DxGame::Deck;
 
 our $VERSION = '0.1';
 
@@ -11,7 +12,7 @@ use Dancer2;
 set serializer => 'JSON';
 
 my $BOARD = DxGame::Board->new;
-my $DECK = DxGAme::Deck->new;
+my $DECK = DxGame::Deck->new;
 my %USERS;
 
 get '/' => sub {
