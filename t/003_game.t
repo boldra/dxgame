@@ -15,10 +15,11 @@ is_board_deeply(
     {
         state             => 1,           # no game
         state_description => 'No game',
-        board_cards       => [],          # no cards on the board
+        visible_cards     => [],          # no cards on the board
         story             => undef,       # no story yet
         scores            => {},          # no players, so no scores
-        storyteller       => undef,
+        storyteller_id    => undef,
+        hidden_card_count => 0,
     }
 );
 

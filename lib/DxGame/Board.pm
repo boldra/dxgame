@@ -26,28 +26,33 @@ has player_ids => (
 has state => (
     is => 'rw',
     isa => 'Num',
+    default => 1,
 );
 
 has scores => (
     is          => 'rw',
     isa         => 'HashRef',
     traits      => [qw<Hash>],
+    default     => sub { { } },
 );
 
 has story => (
     is  => 'rw',
-    isa => 'Str'
+    isa => 'Maybe[Str]',
+    default     => undef,
 );
 
 has storyteller_id => (
     is          => 'rw',
-    isa         => 'Str'
+    isa         => 'Maybe[Str]',
+    default     => undef,
 );
 
-has showing_cards => (
+has visible_cards => (
     is          => 'rw',
     isa         => 'ArrayRef',
     traits      => [qw<Array>],
+    default     => sub { [] },
 );
 
 has hidden_card_count => (
@@ -58,9 +63,10 @@ has hidden_card_count => (
 
 #>>>
 
-sub summary_as_hashref {
+sub as_summary_hashref {
     my ($self) = @_;
     my %summary = %$self;
+    $summary{state_description} = $STATES{$summary{state}};
     return \%summary
 }
 
