@@ -16,7 +16,7 @@ my $DECK = DxGame::Deck->new;
 my %USERS;
 
 get '/' => sub {
-    300 => 'Not valid. Try getting board.';
+    { 300 => 'Not valid. Try getting board.' };
 };
 
 get '/hand' => sub {
@@ -26,9 +26,19 @@ get '/hand' => sub {
 
 put '/board' => sub {
     my $user  = authenticate();
+    my $args = params();
     # Try to change the state.
-    if ( $BOARD->state ) {
-        #code
+    if( $args->{state} == 3 ) {
+        # Request to begin game
+        if ( $BOARD->state == 2) {
+            # perfect time to begin the game!
+            $BOARD->state(3);
+        }
+        else {
+            error("Can't start the game. Wrong state " . $BOARD->state);
+        }
+    } else {
+        error("missing state argument. Args:\n" .  join ' ', keys %$args)
     }
     
 };
@@ -37,7 +47,7 @@ get '/board' => sub {
     return $BOARD->as_summary_hashref;
 };
 
-put '/board/card/:id' => sub {
+put '/board/card/:card_id' => sub {
     my $user  = authenticate();
     my $card  = get_card( param('card_id') );
     if ( $BOARD->state == 3 ) {
@@ -92,7 +102,7 @@ put '/user/:id' => sub {
     my $user_id = param('id');
     if ( $BOARD->state == 1 ) {
         # First player.
-        $BOARD->state = 2;                   #game created;
+        $BOARD->state(2);                   #game created;
         $BOARD->add_player($user_id);
         $USERS{$user_id} = DxGame::User->new($user_id);
     }
@@ -128,7 +138,7 @@ sub _initial_game_state {
 
 sub authenticate {
     my ($user_id) = @_;
-    return $USERS{$user_id};
+    return $USERS{$user_id} // die "Not authenticated user_id='$user_id'";
 }
 
 #sub error {

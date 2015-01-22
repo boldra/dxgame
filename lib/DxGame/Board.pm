@@ -19,7 +19,7 @@ has player_ids => (
     isa    => 'ArrayRef',
     traits => [qw<Array>],
     handles => {
-        add_player => 'push'
+        push_player => 'push'
     },
 );
 
@@ -68,6 +68,12 @@ sub as_summary_hashref {
     my %summary = %$self;
     $summary{state_description} = $STATES{$summary{state}};
     return \%summary
+}
+
+sub add_player {
+    my ($self,$player_id) = @_;
+    $self->push_player($player_id);
+    $self->scores->{$player_id} = 0
 }
 
 sub state_description {

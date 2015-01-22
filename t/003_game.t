@@ -27,24 +27,32 @@ is_board_deeply( \%expected_board );
 # Create game
 dx_put('/user/P1');
 $expected_board{scores} = { P1 => 0 };
-is_board_deeply( \%expected_board );
+$expected_board{player_ids} = [ qw<P1> ];
+$expected_board{state} = 2;
+$expected_board{state_description} = 'waiting for start game or other players to join';
+is_board_deeply( \%expected_board, 'Game created' );
 
 ################################################################################
 # Add second user:
 dx_put('/user/P2');
+$expected_board{player_ids} = [ qw<P1 P2> ];
 $expected_board{scores} = { P1 => 0, P2 => 0 };
-is_board_deeply( \%expected_board );
+is_board_deeply( \%expected_board, 'P2 added' );
 
 ################################################################################
 # Add third user:
 dx_put('/user/P3');
+$expected_board{player_ids} = [ qw<P1 P2 P3> ];
 $expected_board{scores} = { P1 => 0, P2 => 0, P3 => 0 };
-is_board_deeply( \%expected_board );
+is_board_deeply( \%expected_board 'P3 added' );
 
 
 ################################################################################
 # Start the game
 dx_put( '/board', { state => '3' } ); 
+$expected_board{state} = 3;
+$expected_board{state_description} = 'waiting for storyteller to play';
+is_board_deeply( \%expected_board, 'game started' );
 
 done_testing();
 
@@ -62,7 +70,7 @@ sub dx_put {
 }
 
 sub is_board_deeply {
-    my ($expected) = @_;
+    my ($expected,$description) = @_;
     test_psgi
       app    => $APP,
       client => sub {
@@ -70,7 +78,9 @@ sub is_board_deeply {
         my $res =
           $cb->( HTTP::Request->new( GET => "http://localhost/board" ) );
         is( $res->code, '200', 'http ok' );
-        is_deeply( $JSON->decode( $res->content ), $expected );
+        my $struct = eval { $JSON->decode( $res->content ) };
+        $@ and die $res->content;
+        is_deeply( $struct, $expected, $description );
       };
 
 }

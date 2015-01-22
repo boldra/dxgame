@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-
+BEGIN { $ENV{DANCER_ENVIRONMENT} = 'testing' }
 use DxGame::Server;
 use Test::More tests => 2;
 use Plack::Test;
