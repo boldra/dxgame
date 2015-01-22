@@ -34,7 +34,7 @@ put '/board' => sub {
 
 get '/board' => sub {
     return $BOARD->as_summary_hashref;
-}
+};
 
 put '/board/card/:id' => sub {
     my $user  = authenticate();
