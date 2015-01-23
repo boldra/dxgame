@@ -4,6 +4,7 @@ use DxGame::Card;
 use DxGame::User;
 use DxGame::Board;
 use DxGame::Deck;
+use Dancer2::Plugin::Auth::Tiny;
 
 our $VERSION = '0.1';
 
@@ -19,13 +20,13 @@ get '/' => sub {
     { 300 => 'Not valid. Try getting board.' };
 };
 
-get '/hand' => sub {
-    my $user = authenticate();
+get '/hand' => needs login => sub {
+    my $user = $USERS{request->env->{username}};
     return [ $user->hand ];
 };
 
-put '/board' => sub {
-    my $user  = authenticate();
+put '/board' => needs login => sub {
+    my $user = $USERS{request->env->{username}};
     my $args = params();
     # Try to change the state.
     if( $args->{state} == 3 ) {
@@ -47,8 +48,8 @@ get '/board' => sub {
     return $BOARD->as_summary_hashref;
 };
 
-put '/board/card/:card_id' => sub {
-    my $user  = authenticate();
+put '/board/card/:card_id' => needs login => sub {
+    my $user = $USERS{request->env->{username}};
     my $card  = get_card( param('card_id') );
     if ( $BOARD->state == 3 ) {
 
@@ -87,9 +88,9 @@ put '/board/card/:card_id' => sub {
 
 };
 
-put '/board/bet/:card_id' => sub {
+put '/board/bet/:card_id' => needs login => sub { 
+    my $user = $USERS{request->env->{username}};
     my $card  = get_card( param('card_id') );
-    my $user  = authenticate();
     if ( my $card_id = $BOARD->has_bet_from_user_id( $user->id ) ) {
         error("You have already bet on card $card_id");
     }
@@ -98,7 +99,8 @@ put '/board/bet/:card_id' => sub {
     }
 };
 
-put '/user/:id' => sub {
+put '/user/:id' => needs login => sub {
+    my $user = $USERS{request->env->{username}};
     my $user_id = param('id');
     if ( $BOARD->state == 1 ) {
         # First player.
@@ -117,16 +119,19 @@ put '/user/:id' => sub {
     return {};
 };
 
-put '/board/story' => sub {
+put '/board/story' => needs login => sub {
+    my $user = $USERS{request->env->{username}};
     my $story = param("story");
-    my $user  = authenticate();
     if ( $user->is_storyteller ) {
         $BOARD->update_story($story);
     }
     else {
         error("You are not the storyteller");
     }
+};
 
+get '/login' => sub {
+    template login => {};
 };
 
 sub _initial_game_state {
@@ -134,11 +139,6 @@ sub _initial_game_state {
         board => DxGame::Board->new,
         hands => {},
     );
-}
-
-sub authenticate {
-    my ($user_id) = @_;
-    return $USERS{$user_id} // die "Not authenticated user_id='$user_id'";
 }
 
 #sub error {
