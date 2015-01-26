@@ -134,6 +134,17 @@ get '/login' => sub {
     template login => {};
 };
 
+post '/login' => sub {
+    my $user_id = param('user_id');
+    my $password  = param('password');
+    my $redir_url = param('redirect_url') || '/login';
+
+    if( $user_id =~ /^P\d$/ ) {
+        session user => $user_id;
+    }
+    redirect $redir_url;
+};
+
 sub _initial_game_state {
     return (
         board => DxGame::Board->new,
