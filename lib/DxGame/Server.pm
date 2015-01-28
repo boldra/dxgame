@@ -11,13 +11,15 @@ our $VERSION = '0.1';
 use Modern::Perl;
 use Dancer2;
 set serializer => 'JSON';
+set session => 'simple';
+set plugins => { 'Auth::Extensible' => { provider => 'Example' } };
 
 my $BOARD = DxGame::Board->new;
-my $DECK = DxGame::Deck->new;
+my $DECK  = DxGame::Deck->new;
 my %USERS;
 
 get '/' => sub {
-    { 300 => 'Not valid. Try getting board.' };
+    { 300 => 'Not valid. Try getting /board.' };
 };
 
 get '/hand' => needs login => sub {
@@ -135,12 +137,19 @@ get '/login' => sub {
 };
 
 post '/login' => sub {
-    my $user_id = param('user_id');
-    my $password  = param('password');
     my $redir_url = param('redirect_url') || '/login';
 
-    if( $user_id =~ /^P\d$/ ) {
-        session user => $user_id;
+    my $auth = request->env->{HTTP_AUTHORIZATION};    
+    if (defined $auth && $auth =~ /^Basic (.*)$/) {
+        my ($user, $password) = split(/:/, (MIME::Base64::decode($1) || ":"));
+    
+        if( $user =~ /^P\d$/ ) {
+            say STDERR "Authenticated user '$user' with password '$password'";
+            session user => $user;
+        }
+        else {
+            warn "Unknown user $user";
+        }
     }
     redirect $redir_url;
 };
