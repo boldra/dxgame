@@ -39,6 +39,7 @@ put '/board' => needs login => sub {
 
             # perfect time to begin the game!
             $BOARD->state(3);
+            return $BOARD->as_summary_hashref;
         }
         else {
             error( "Can't start the game. Wrong state " . $BOARD->state );
