@@ -32,9 +32,12 @@ my @players = (
 
 ################################################################################
 # Create game
-is((defined $players[1]->{cookie}), '', "No session cookie $players[1]->{username}");
+is( ( defined $players[1]->{cookie} ),
+    '', "No session cookie $players[1]->{username}" );
 login( $players[1] );
-like($players[1]->{cookie}, qr{session}, "session cookie $players[1]->{username}=$players[1]->{cookie}");
+like( $players[1]->{cookie},
+    qr{session},
+    "session cookie $players[1]->{username}=$players[1]->{cookie}" );
 $expected_board{scores}     = { P1 => 0 };
 $expected_board{player_ids} = [qw<P1>];
 $expected_board{state}      = 2;
@@ -75,10 +78,6 @@ sub dx_put {
       client => sub {
         my $cb  = shift;
         my $res = $cb->($req);
-        #if ( $res->code eq '302' and $res->header('location') =~ /login/ ) {
-        #    login( $cb, $res->header('location'), $user ); # adds a cookie to $user
-        #    $res = $cb->($req);    #redo original request
-        #}
         is( $res->code, '200', "http '$uri' ok" );
       };
 }
@@ -100,7 +99,7 @@ sub is_board_deeply {
 }
 
 sub login {
-    my ( $user ) = @_;
+    my ($user) = @_;
     my $uri = 'http://localhost/player';
     my $auth_req = HTTP::Request->new( PUT => $uri );
     my $json = $JSON->encode($user);
@@ -113,10 +112,11 @@ sub login {
         my $cb  = shift;
         my $res = $cb->($auth_req);
         is( $res->code, '200', "login as '$user->{username}' successful" );
-#        say "Login result:\n" . Dump( { req => $auth_req, res => $res } );
+
+     #        say "Login result:\n" . Dump( { req => $auth_req, res => $res } );
         my $cookie = $res->header('set-cookie');
         $cookie =~ s{HttpOnly}{};
         $user->{cookie} = $cookie;
       };
-    
+
 }
