@@ -119,12 +119,14 @@ is_board_deeply( \%expected_board, 'all bets received' );
 # progress to next round
 
 dx_put( '/board', $players[1], { state => 3 } );
+
 $expected_board{bet_count} = 0;
 $expected_board{visible_cards} = [];
 $expected_board{state} = 3;
+$expected_board{storyteller_id} = 'P2';
 $expected_board{state_description} = 'waiting for storyteller to play';
 $expected_board{story} = undef;
-is_board_deeply( \%expected_board, 'P3 added' );
+is_board_deeply( \%expected_board, 'New round prepared' );
 $hands[$_] = check_hand($players[$_]) for 1..3;
 
 
@@ -195,7 +197,7 @@ test_psgi
         my $struct = eval { $JSON->decode( $res->content ) };
         $hand = $struct;
         is( $res->code, '200', "Got hand @{$hand}" );
-        is( (scalar @{ $hand} ), $DxGame::Server::RULES{hand_size}, "got five cards");
+        is( (scalar @{ $hand} ), $DxGame::Server::RULES{hand_size}, "$player->{username} has five cards");
     };
     return $hand;
 }

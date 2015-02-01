@@ -19,8 +19,8 @@ has player_ids => (
     isa         => 'ArrayRef',
     traits      => [qw<Array>],
     handles => {
-#        first_player_id => 'first',
-        push_player => 'push',
+        all_player_ids  => 'elements',
+        push_player     => 'push',
     },
 );
 
@@ -110,17 +110,14 @@ sub set_next_storyteller_id {
 
 sub player_after {
     my ($self,$prev) = @_;
-    my $next;
-    for my $id ($self->all_player_ids) {
-        if( $next == 1 ) {
-            return $id;
-        }
+    my $next = 0;
+    for my $id ( $self->all_player_ids ) {
+        $next and return $id;
         if ($id eq $prev) {
-            my $next = 1;
+            $next = 1;
         }
     }
     return $self->player_ids->[0];
-
 }
 
 sub add_player {

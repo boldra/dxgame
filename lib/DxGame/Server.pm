@@ -27,10 +27,10 @@ get '/' => sub {
 
 put '/board' => needs login => sub {
     my $user = session('user');
-    my $args = params();
+    my $requested_state = param('state');
 
     # Try to change the state.
-    if ( $args->{state} == 3 ) {
+    if ( $requested_state == 3 ) {
 
         # Request to begin game
         if ( $BOARD->state == 2 ) {
@@ -41,6 +41,11 @@ put '/board' => needs login => sub {
             _deal_cards();
             return $BOARD->as_summary_hashref;
         }
+        elsif ( $BOARD->state == 6) {
+
+            # Request to end round (can come from any player)
+            _new_round()
+        }
         else {
 
             return { error =>
@@ -48,24 +53,9 @@ put '/board' => needs login => sub {
             };
         }
     }
-    elsif ( $args->{state} == 6) {
-        
-        # Request to end round (can come from any player)
-        $BOARD->state(3);
-        $BOARD->set_next_storyteller_id;
-        _deal_cards();
-        $BOARD->story(undef);
-        for my $user (values %USERS) {
-            $user->bet_on_card_id(undef);
-            $user->played_card_id(undef);
-        }
-        return $BOARD->as_summary_hashref;
-    }
     else {
         return {
-            error => error(
-                "missing state argument. Args:\n" . join ' ', keys %$args
-            )
+            error => error("missing state argument")
         };
     }
 
@@ -226,6 +216,21 @@ put '/player' => sub {
     }
     return $BOARD->as_summary_hashref;
 };
+
+sub _new_round {
+    $BOARD->state(3);
+    $BOARD->set_next_storyteller_id;
+    _deal_cards();
+    $BOARD->story(undef);
+    $BOARD->visible_cards([]);
+    $BOARD->reset_bet_count;
+    for my $user (values %USERS) {
+        $user->bet_on_card_id(undef);
+        $user->played_card_id(undef);
+    }
+    return $BOARD->as_summary_hashref;
+
+}
 
 sub _update_scores {
     my $count_players_who_guessed_correctly;
