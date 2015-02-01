@@ -35,7 +35,7 @@ sub play_card {
 
 sub has_card {
     my ( $self, $card_id ) = @_;
-    for my $id ( $self->hand ) {
+    for my $id ( $self->all_cards_in_hand ) {
         $id == $card_id and return 1;
     }
     return 0;

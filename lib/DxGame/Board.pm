@@ -143,10 +143,6 @@ sub has_bet_from_user_id {
     return 0;
 }
 
-sub update_story {
-    
-}
-
 sub cards_have_been_received_from_all_users {
     
 }

@@ -68,30 +68,35 @@ $expected_board{state_description} = 'waiting for storyteller to play';
 is_board_deeply( \%expected_board, 'game started' );
 
 ################################################################################
-# Get hand of P1
-my @hands;
-my $req = HTTP::Request->new( GET => "http://localhost/hand" );
-test_psgi
-    app    => $APP,
-      client => sub {
-        my $cb = shift;
-        $req->header( Cookie => $players[1]->{cookie} );
-        my $res = $cb->( $req );
-        my $struct = eval { $JSON->decode( $res->content ) };
-        $hands[1] = $struct;
-        is( $res->code, '200', "Got hand @{$struct}" );
-        is( (scalar @{ $hands[1]} ), $DxGame::Server::RULES{hand_size}, "got five cards");
-    };
+# Get hands
+my @hands = ([],[],[],[]); # no player 0
+$hands[$_] = check_hand($players[$_]) for 1..3;
 
 ################################################################################
 # Storyteller: play one card
 dx_put( '/board/card/'.$hands[1]->[0], $players[1] ); # play the first card
+$expected_board{hidden_card_count}++;
+is_board_deeply( \%expected_board, '1 card played' );
 
 ################################################################################
 # Storyteller: tell a the story
+$expected_board{story} = "you're mother";
+$expected_board{state} = 4;
+$expected_board{state_description} = 'waiting for at least one player to lay a card';
+dx_put( '/board/story', $players[1], { story => $expected_board{story} } );
+is_board_deeply( \%expected_board, 'storyteller finished public, waiting for other players' );
 
 ################################################################################
 # Put other cards
+dx_put( '/board/card/'.$hands[2]->[0], $players[2] ); 
+$expected_board{hidden_card_count}++;
+is_board_deeply( \%expected_board, 'two players have played' );
+dx_put( '/board/card/'.$hands[3]->[0], $players[3] ); 
+$expected_board{hidden_card_count}++;
+$expected_board{state} = 5;
+$expected_board{state_description} = 'waiting for at least one player to make a bet';
+is_board_deeply( \%expected_board, 'all players have played' );
+
 
 ################################################################################
 # lay bets
@@ -154,4 +159,22 @@ sub login {
         $user->{cookie} = $cookie;
       };
 
+}
+
+sub check_hand {
+    my ($player) = @_;
+    my $hand;
+    my $req = HTTP::Request->new( GET => "http://localhost/hand" );
+test_psgi
+    app    => $APP,
+      client => sub {
+        my $cb = shift;
+        $req->header( Cookie => $player->{cookie} );
+        my $res = $cb->( $req );
+        my $struct = eval { $JSON->decode( $res->content ) };
+        $hand = $struct;
+        is( $res->code, '200', "Got hand @{$hand}" );
+        is( (scalar @{ $hand} ), $DxGame::Server::RULES{hand_size}, "got five cards");
+    };
+    return $hand;
 }

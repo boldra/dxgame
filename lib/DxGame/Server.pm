@@ -17,9 +17,9 @@ set plugins    => { 'Auth::Extensible' => { provider => 'Example' } };
 my $BOARD = DxGame::Board->new;
 my $DECK  = DxGame::Deck->new;
 my %USERS;
-our %RULES = (
-    hand_size => 5
-);
+my $STORY_CARD_ID;
+my @PLAYED_CARD_IDS;
+our %RULES = ( hand_size => 5 );
 
 get '/' => sub {
     { 300 => 'Not valid. Try getting /board.' };
@@ -69,7 +69,7 @@ get '/hand' => needs login => sub {
 
 sub _deal_cards {
     for my $user ( values %USERS ) {
-        while ( $user->hand_size < $RULES{hand_size}) {
+        while ( $user->hand_size < $RULES{hand_size} ) {
             my $card = $DECK->draw_card;
             $user->add_card($card);
         }
@@ -77,36 +77,52 @@ sub _deal_cards {
 }
 
 put '/board/card/:card_id' => needs login => sub {
-    my $user = session('user');
+    my $user    = session('user');
     my $card_id = param('card_id');
     if ( $BOARD->state == 3 ) {
 
         # Storyteller
         $user->play_card($card_id);
         $BOARD->increment_hidden_cards;
+        $STORY_CARD_ID = $card_id;
+        if ( $BOARD->story ) {
+
+            # We have a story and a card from the storyteller. Next state.
+            $BOARD->state(4);
+        }
         return $BOARD->as_summary_hashref;
     }
     elsif ( $BOARD->state == 4 ) {
 
         # Other players
-        if ( $user->has_card( $card_id ) ) {
-            if ( $BOARD->has_card_from_user($user) ) {
+        if ( $user->has_card($card_id) ) {
+            if ( $user->played_card ) {
                 return {
                     error => error(
-                            "You have already played card $card_id this round.",
+                        "You have already played card $card_id this round.",
                     )
                 };
             }
             else {
-                $BOARD->play_card( $user, $card_id );
-                if ( $BOARD->has_cards_from_all_players( values %USERS ) ) {
-                    $BOARD->state = 5;    #waiting for players to make a bet.
+                $user->play_card($card_id);
+                $BOARD->increment_hidden_cards;
+                if ( $BOARD->hidden_card_count == scalar( values %USERS ) ) {
+
+                    # All users have played cards
+                    $BOARD->state(5);
                 }
+
                 return $BOARD->as_summary_hashref;
             }
         }
         else {
-            return { error => error( "You don't have card $card_id" ) };
+            my @cards = join q{ }, $user->all_cards_in_hand;
+            return {
+                error => error(
+                    $user->id
+                      . " doesn't have card $card_id. Choose from @cards."
+                )
+            };
         }
     }
     else {
@@ -130,17 +146,24 @@ put '/board/bet/:card_id' => needs login => sub {
     else {
         $BOARD->lay_bet( $user, $card );    # later, add amount
     }
+    return $BOARD->as_summary_hashref;
 };
 
 put '/board/story' => needs login => sub {
     my $user  = session('user');
     my $story = param("story");
-    if ( $user->is_storyteller ) {
-        $BOARD->update_story($story);
+    if ( $user->id eq $BOARD->storyteller_id ) {
+        $BOARD->story($story);
+        if ( $BOARD->story and $STORY_CARD_ID ) {
+
+            # We have a story and a card from the storyteller. Next state.
+            $BOARD->state(4);
+        }
     }
     else {
-        return { error => error("You are not the storyteller") };
+        return { error => error("You are not the storyteller this turn.") };
     }
+    return $BOARD->as_summary_hashref;
 };
 
 put '/player' => sub {
@@ -167,6 +190,7 @@ put '/player' => sub {
     else {
         return { error => "invalid username or password" };
     }
+    return $BOARD->as_summary_hashref;
 };
 
 sub _initial_game_state {
