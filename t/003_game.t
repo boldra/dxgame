@@ -21,14 +21,20 @@ my %expected_board = (
     storyteller_id    => undef,       # storyteller defined after game begins
     hidden_card_count => 0,           # no hidden cards
 );
-is_board_deeply( \%expected_board );
+is_board_deeply( \%expected_board, 'initial board' );
 
-my @players =
-  ( {}, { P1 => 'secret1' }, { P2 => 'secret2' }, { P3 => 'secret3' }, );
+my @players = (
+    {},
+    { username => 'P1', password => 'secret1' },
+    { username => 'P2', password => 'secret2' },
+    { username => 'P3', password => 'secret3' },
+);
 
 ################################################################################
 # Create game
-dx_put( '/user/P1', $players[1] );
+is((defined $players[1]->{cookie}), '', "No session cookie $players[1]->{username}");
+login( $players[1] );
+like($players[1]->{cookie}, qr{session}, "session cookie $players[1]->{username}=$players[1]->{cookie}");
 $expected_board{scores}     = { P1 => 0 };
 $expected_board{player_ids} = [qw<P1>];
 $expected_board{state}      = 2;
@@ -38,14 +44,14 @@ is_board_deeply( \%expected_board, 'Game created' );
 
 ################################################################################
 # Add second user:
-dx_put( '/user/P2', $players[2], );
+login( $players[2] );
 $expected_board{player_ids} = [qw<P1 P2>];
 $expected_board{scores} = { P1 => 0, P2 => 0 };
 is_board_deeply( \%expected_board, 'P2 added' );
 
 ################################################################################
 # Add third user:
-dx_put( '/user/P3', $players[3], );
+login( $players[2] );
 $expected_board{player_ids} = [qw<P1 P2 P3>];
 $expected_board{scores} = { P1 => 0, P2 => 0, P3 => 0 };
 is_board_deeply( \%expected_board, 'P3 added' );
@@ -69,10 +75,10 @@ sub dx_put {
       client => sub {
         my $cb  = shift;
         my $res = $cb->($req);
-        if ( $res->code eq '302' and $res->header('location') =~ /login/ ) {
-            login( $cb, $res->header('location'), $user );
-            $res = $cb->($req);    #redo original request
-        }
+        #if ( $res->code eq '302' and $res->header('location') =~ /login/ ) {
+        #    login( $cb, $res->header('location'), $user ); # adds a cookie to $user
+        #    $res = $cb->($req);    #redo original request
+        #}
         is( $res->code, '200', "http '$uri' ok" );
       };
 }
@@ -85,7 +91,7 @@ sub is_board_deeply {
         my $cb = shift;
         my $res =
           $cb->( HTTP::Request->new( GET => "http://localhost/board" ) );
-        is( $res->code, '200', 'http ok' );
+        is( $res->code, '200', 'fetch board HTTP ok' );
         my $struct = eval { $JSON->decode( $res->content ) };
         $@ and die $res->content;
         is_deeply( $struct, $expected, $description );
@@ -94,23 +100,21 @@ sub is_board_deeply {
 }
 
 sub login {
-    my ( $cb, $uri, $user, ) = @_;
-    my $auth_req = HTTP::Request->new( POST => $uri );
-    $auth_req->authorization_basic( $user->{username}, $user->{password} );
-    my $res = $cb->($auth_req);    # login
-    say "Login result:\n" . Dump( { req => $auth_req, res => $res } );
-
-    # we expect another redirect, and we send our cookies:
-    $res = $cb->($auth_req);
-    $user->{cookie} = $res->header('set-cookie');
-    $auth_req->method('GET');
-    $auth_req->header( Cookie => $user->{cookie} );
-    say "########## location:" . $res->header('location');
-    say "post-login confirm:\n" . Dump( { req => $auth_req, res => $res } );
-    die;
-    #
-    #$res->code == 200
-    #  or Carp::confess(
-    #    "Login failed\n" . Dump { req => $req, res => $res } );
-
+    my ( $user ) = @_;
+    my $uri = 'http://localhost/player';
+    my $auth_req = HTTP::Request->new( PUT => $uri );
+    my $json = $JSON->encode($user);
+    $auth_req->content($json);
+    $auth_req->content_type('application/json');
+    $auth_req->content_length( length( $auth_req->content ) );
+    test_psgi
+      app    => $APP,
+      client => sub {
+        my $cb  = shift;
+        my $res = $cb->($auth_req);
+        is( $res->code, '200', "login as '$user->{username}' successful" );
+#        say "Login result:\n" . Dump( { req => $auth_req, res => $res } );
+        $user->{cookie} = $res->header('set-cookie');
+      };
+    
 }
