@@ -20,6 +20,7 @@ my %expected_board = (
     scores            => {},          # no players, so no scores
     storyteller_id    => undef,       # storyteller defined after game begins
     hidden_card_count => 0,           # no hidden cards
+    bet_count         => 0,             # nobody has placed a bet.
 );
 is_board_deeply( \%expected_board, 'initial board' );
 
@@ -74,7 +75,8 @@ $hands[$_] = check_hand($players[$_]) for 1..3;
 
 ################################################################################
 # Storyteller: play one card
-dx_put( '/board/card/'.$hands[1]->[0], $players[1] ); # play the first card
+my $storyteller_card_id = $hands[1]->[0];
+dx_put( "/board/card/$storyteller_card_id", $players[1] ); # play the first card
 $expected_board{hidden_card_count}++;
 is_board_deeply( \%expected_board, '1 card played' );
 
@@ -92,20 +94,39 @@ dx_put( '/board/card/'.$hands[2]->[0], $players[2] );
 $expected_board{hidden_card_count}++;
 is_board_deeply( \%expected_board, 'two players have played' );
 dx_put( '/board/card/'.$hands[3]->[0], $players[3] ); 
-$expected_board{hidden_card_count}++;
+$expected_board{hidden_card_count} = 0;
+$expected_board{visible_cards} = [sort ($hands[1]->[0], $hands[2]->[0], $hands[3]->[0])];
 $expected_board{state} = 5;
 $expected_board{state_description} = 'waiting for at least one player to make a bet';
 is_board_deeply( \%expected_board, 'all players have played' );
 
+################################################################################
+# lay bets (everyone gets it right)
+
+dx_put( "/board/bet/$storyteller_card_id", $players[2] );
+$expected_board{bet_count}++;
+is_board_deeply( \%expected_board, 'one bet recieved' );
+dx_put( "/board/bet/$storyteller_card_id", $players[3] );
+$expected_board{bet_count}++;
+$expected_board{state} = 6;
+$expected_board{state_description} = 'waiting for players to confirm the round is finished';
+$expected_board{scores}{P2} = 2;
+$expected_board{scores}{P3} = 2;
+is_board_deeply( \%expected_board, 'all bets received' );
+
 
 ################################################################################
-# lay bets
+# progress to next round
 
-################################################################################
-# update scores
+dx_put( '/board', $players[1], { state => 3 } );
+$expected_board{bet_count} = 0;
+$expected_board{visible_cards} = [];
+$expected_board{state} = 3;
+$expected_board{state_description} = 'waiting for storyteller to play';
+$expected_board{story} = undef;
+is_board_deeply( \%expected_board, 'P3 added' );
+$hands[$_] = check_hand($players[$_]) for 1..3;
 
-################################################################################
-# check storyteller has changed
 
 done_testing();
 

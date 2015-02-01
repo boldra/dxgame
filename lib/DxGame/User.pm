@@ -1,6 +1,5 @@
 package DxGame::User;
 use Moose;
-use DxGame::Card;
 
 #<<<
 has id => (
@@ -10,7 +9,7 @@ has id => (
 
 has hand => (
     is          => 'rw',
-    isa         => 'ArrayRef',
+    isa         => 'ArrayRef[Str]',
     traits      => [qw<Array>],
     handles     => {
         hand_size => 'count',
@@ -20,17 +19,23 @@ has hand => (
     default => sub {[]},
 );
 
-has played_card => (
+has played_card_id => (
     is          => 'rw',
-    isa         => 'Maybe[DxGame::Card]',
+    isa         => 'Maybe[Str]',
+);
+
+has bet_on_card_id => ( 
+    is          => 'rw',
+    isa         => 'Maybe[Str]',
 );
 
 #>>>
-sub play_card {
+sub play_card_id {
     my ( $self, $card_id ) = @_;
     $self->has_card($card_id);
     $self->hand( [ grep { $_ ne $card_id } $self->all_cards_in_hand ] );
-
+    $self->played_card_id($card_id);
+    return $card_id;
 }
 
 sub has_card {

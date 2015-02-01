@@ -54,6 +54,9 @@ has visible_cards => (
     isa         => 'ArrayRef',
     traits      => [qw<Array>],
     default     => sub { [] },
+    handles => {
+        all_visible_cards => 'elements',
+    },
 );
 
 has hidden_card_count => (
@@ -67,6 +70,17 @@ has hidden_card_count => (
     }
 );
 
+has bet_count => (
+    is          => 'rw',
+    isa         => 'Num',
+    default     => 0,
+    traits      => [qw<Counter>],
+    handles => {
+        increment_bet_count => 'inc',
+        reset_bet_count => 'reset',
+    }    
+);
+
 #>>>
 
 sub as_summary_hashref {
@@ -74,6 +88,14 @@ sub as_summary_hashref {
     my %summary = %$self;
     $summary{state_description} = $STATES{$summary{state}};
     return \%summary
+}
+
+sub card_id_is_visible {
+    my ($self,$card_id) = @_;
+    for my $visible_card_id ($self->all_visible_cards) {
+        $card_id eq $visible_card_id and return 1;
+    }
+    return 0
 }
 
 sub set_next_storyteller_id {
@@ -131,20 +153,6 @@ sub has_cards_from_all_players {
         $player->player_card or return 0
     }
     return 1;
-}
-
-sub has_bet_from_user_id {
-    my ( $self, $user_id ) = @_;
-    for my $bet ( $self->bets ) {
-        if ( $bet->{owner_id} == $user_id ) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-sub cards_have_been_received_from_all_users {
-    
 }
 
 1;
