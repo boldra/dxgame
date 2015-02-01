@@ -15,18 +15,19 @@ my %STATES = (
 # <<<
 
 has player_ids => (
-    is     => 'rw',
-    isa    => 'ArrayRef',
-    traits => [qw<Array>],
+    is          => 'rw',
+    isa         => 'ArrayRef',
+    traits      => [qw<Array>],
     handles => {
-        push_player => 'push'
+#        first_player_id => 'first',
+        push_player => 'push',
     },
 );
 
 has state => (
-    is => 'rw',
-    isa => 'Num',
-    default => 1,
+    is          => 'rw',
+    isa         => 'Num',
+    default     => 1,
 );
 
 has scores => (
@@ -68,6 +69,31 @@ sub as_summary_hashref {
     my %summary = %$self;
     $summary{state_description} = $STATES{$summary{state}};
     return \%summary
+}
+
+sub set_next_storyteller_id {
+    my ($self) = @_;
+    if (my $old = $self->storyteller_id) {
+        return $self->storyteller_id($self->player_after($old));
+    }
+    else {
+        return $self->storyteller_id($self->player_ids->[0]);
+    }
+}
+
+sub player_after {
+    my ($self,$prev) = @_;
+    my $next;
+    for my $id ($self->all_player_ids) {
+        if( $next == 1 ) {
+            return $id;
+        }
+        if ($id eq $prev) {
+            my $next = 1;
+        }
+    }
+    return $self->player_ids->[0];
+
 }
 
 sub add_player {

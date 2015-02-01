@@ -63,8 +63,44 @@ is_board_deeply( \%expected_board, 'P3 added' );
 # Start the game
 dx_put( '/board', $players[1], { state => '3' } );
 $expected_board{state}             = 3;
+$expected_board{storyteller_id}    = $players[1]->{username}; #1 becomes the storyteller
 $expected_board{state_description} = 'waiting for storyteller to play';
 is_board_deeply( \%expected_board, 'game started' );
+
+################################################################################
+# Get hand of P1
+my @hands;
+my $req = HTTP::Request->new( GET => "http://localhost/hand" );
+test_psgi
+    app    => $APP,
+      client => sub {
+        my $cb = shift;
+        $req->header( Cookie => $players[1]->{cookie} );
+        my $res = $cb->( $req );
+        my $struct = eval { $JSON->decode( $res->content ) };
+        $hands[0] = $struct;
+        is( $res->code, '200', "Got hand @{$struct}" );
+    };
+        
+
+################################################################################
+# Put one card
+dx_put( '/board/card/');
+
+################################################################################
+# Tell a the story
+
+################################################################################
+# Put other cards
+
+################################################################################
+# lay bets
+
+################################################################################
+# update scores
+
+################################################################################
+# check storyteller has changed
 
 done_testing();
 
@@ -94,8 +130,7 @@ sub is_board_deeply {
         my $struct = eval { $JSON->decode( $res->content ) };
         $@ and die $res->content;
         is_deeply( $struct, $expected, $description );
-      };
-
+    };
 }
 
 sub login {

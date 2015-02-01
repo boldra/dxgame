@@ -22,11 +22,6 @@ get '/' => sub {
     { 300 => 'Not valid. Try getting /board.' };
 };
 
-get '/hand' => needs login => sub {
-    my $user = session('user');
-    return [ $user->hand ];
-};
-
 put '/board' => needs login => sub {
     my $user = session('user');
     my $args = params();
@@ -39,14 +34,23 @@ put '/board' => needs login => sub {
 
             # perfect time to begin the game!
             $BOARD->state(3);
+            $BOARD->set_next_storyteller_id;
+            _deal_cards();
             return $BOARD->as_summary_hashref;
         }
         else {
-            error( "Can't start the game. Wrong state " . $BOARD->state );
+
+            return { error =>
+                  error( "Can't start the game. Wrong state " . $BOARD->state )
+            };
         }
     }
     else {
-        error( "missing state argument. Args:\n" . join ' ', keys %$args );
+        return {
+            error => error(
+                "missing state argument. Args:\n" . join ' ', keys %$args
+            )
+        };
     }
 
 };
@@ -54,6 +58,21 @@ put '/board' => needs login => sub {
 get '/board' => sub {
     return $BOARD->as_summary_hashref;
 };
+
+get '/hand' => needs login => sub {
+    my $user = session('user');
+    return [ $user->hand ];
+};
+
+sub _deal_cards {
+    for my $user ( values %USERS ) {
+        while ( $user->hand_size < 5) {
+            my $card = $DECK->draw_card;
+            say STDERR "Player " . $user->id . " gets card '$card'";
+            $user->add_card($card);
+        }
+    }
+}
 
 put '/board/card/:card_id' => needs login => sub {
     my $user = session('user');
@@ -69,10 +88,13 @@ put '/board/card/:card_id' => needs login => sub {
         # Other players
         if ( $user->has_card( $card->id ) ) {
             if ( $BOARD->has_card_from_user($user) ) {
-                warn "already have card from user";
-                error(  "You have already played card "
-                      . $card->id
-                      . " this round " );
+                return {
+                    error => error(
+                            "You have already played card "
+                          . $card->id
+                          . " this round "
+                    )
+                };
             }
             else {
                 $BOARD->play_card( $user, $card );
@@ -82,15 +104,17 @@ put '/board/card/:card_id' => needs login => sub {
             }
         }
         else {
-                warn "already have card from user";
-            error( "You don't have card " . $card->id );
+            return { error => error( "You don't have card " . $card->id ) };
         }
     }
     else {
-                warn "already have card from user";
-        error(  "Game is in wrong state '"
-              . $BOARD->state
-              . "'. Not expecting a card yet!" );
+        return {
+            error => error(
+                    "Game is in wrong state '"
+                  . $BOARD->state
+                  . "'. Not expecting a card yet!"
+            )
+        };
     }
 
 };
@@ -99,7 +123,7 @@ put '/board/bet/:card_id' => needs login => sub {
     my $user = session('user');
     my $card = get_card( param('card_id') );
     if ( my $card_id = $BOARD->has_bet_from_user_id( $user->id ) ) {
-        error("You have already bet on card $card_id");
+        return { error => error("You have already bet on card $card_id") };
     }
     else {
         $BOARD->lay_bet( $user, $card );    # later, add amount
@@ -107,14 +131,13 @@ put '/board/bet/:card_id' => needs login => sub {
 };
 
 put '/board/story' => needs login => sub {
-    my $user = session('user');
+    my $user  = session('user');
     my $story = param("story");
     if ( $user->is_storyteller ) {
         $BOARD->update_story($story);
     }
     else {
-        warn "not storyteller";
-        error("You are not the storyteller");
+        return { error => error("You are not the storyteller") };
     }
 };
 
@@ -125,17 +148,17 @@ put '/player' => sub {
         my $user = DxGame::User->new($username);
         session user => $user;
         if ( $BOARD->state == 1 ) {
-    
+
             # First player.
-            $BOARD->state(2);                   #game created;
-            $BOARD->add_player($user->id);
-            $USERS{$user->id} = $user;
+            $BOARD->state(2);    #game created;
+            $BOARD->add_player( $user->id );
+            $USERS{ $user->id } = $user;
         }
         elsif ( $BOARD->state == 2 ) {
-    
+
             # additional player
-            $BOARD->add_player($user->id);
-            $USERS{$user->id} = $user;
+            $BOARD->add_player( $user->id );
+            $USERS{ $user->id } = $user;
         }
         return { login_ok => $username };
     }

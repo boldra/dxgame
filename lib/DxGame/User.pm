@@ -12,6 +12,11 @@ has hand => (
     is          => 'rw',
     isa         => 'ArrayRef',
     traits      => [qw<Array>],
+    handles     => {
+        hand_size => 'count',
+        add_card => 'push',
+    },
+    default => sub {[]},
 );
 
 has played_card => (
@@ -27,6 +32,7 @@ has played_card => (
 #    is  => 'rw',
 #    isa => 'Bool',
 #);
+
 
 sub BUILDARGS {
     my ( $class, $args ) = @_;
