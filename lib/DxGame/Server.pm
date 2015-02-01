@@ -23,12 +23,12 @@ get '/' => sub {
 };
 
 get '/hand' => needs login => sub {
-    my $user = $USERS{ request->env->{username} };
+    my $user = session('user');
     return [ $user->hand ];
 };
 
 put '/board' => needs login => sub {
-    my $user = $USERS{ request->env->{username} };
+    my $user = session('user');
     my $args = params();
 
     # Try to change the state.
@@ -55,7 +55,7 @@ get '/board' => sub {
 };
 
 put '/board/card/:card_id' => needs login => sub {
-    my $user = $USERS{ request->env->{username} };
+    my $user = session('user');
     my $card = get_card( param('card_id') );
     if ( $BOARD->state == 3 ) {
 
@@ -68,6 +68,7 @@ put '/board/card/:card_id' => needs login => sub {
         # Other players
         if ( $user->has_card( $card->id ) ) {
             if ( $BOARD->has_card_from_user($user) ) {
+                warn "already have card from user";
                 error(  "You have already played card "
                       . $card->id
                       . " this round " );
@@ -80,10 +81,12 @@ put '/board/card/:card_id' => needs login => sub {
             }
         }
         else {
+                warn "already have card from user";
             error( "You don't have card " . $card->id );
         }
     }
     else {
+                warn "already have card from user";
         error(  "Game is in wrong state '"
               . $BOARD->state
               . "'. Not expecting a card yet!" );
@@ -92,7 +95,7 @@ put '/board/card/:card_id' => needs login => sub {
 };
 
 put '/board/bet/:card_id' => needs login => sub {
-    my $user = $USERS{ request->env->{username} };
+    my $user = session('user');
     my $card = get_card( param('card_id') );
     if ( my $card_id = $BOARD->has_bet_from_user_id( $user->id ) ) {
         error("You have already bet on card $card_id");
@@ -103,43 +106,36 @@ put '/board/bet/:card_id' => needs login => sub {
 };
 
 put '/board/story' => needs login => sub {
-    my $user  = $USERS{ request->env->{username} };
+    my $user = session('user');
     my $story = param("story");
     if ( $user->is_storyteller ) {
         $BOARD->update_story($story);
     }
     else {
+        warn "not storyteller";
         error("You are not the storyteller");
     }
 };
-
-#put '/player/:user_id' => needs login => sub {
-#    my $player = session( param('user_id') );
-#    if ( $BOARD->state == 1 ) {
-#
-#        # First player.
-#        $BOARD->state(2);                   #game created;
-#        $BOARD->add_player($player);
-#        $USERS{$player->user_id} = $player;
-#    }
-#    elsif ( $BOARD->state == 2 ) {
-#
-#        # additional player
-#        $BOARD->add_player($player);
-#        $USERS{$player->user_id} = $player;
-#    }
-#    else {
-#        error("Too late to join game, game has already started");
-#    }
-#    return {};
-#};
-
 
 put '/player' => sub {
     my $username = param('username');
     my $password = param('password');
     if ( _is_valid( $username, $password ) ) {
-        session user => $username;
+        my $user = DxGame::User->new($username);
+        session user => $user;
+        if ( $BOARD->state == 1 ) {
+    
+            # First player.
+            $BOARD->state(2);                   #game created;
+            $BOARD->add_player($user->id);
+            $USERS{$user->id} = $user;
+        }
+        elsif ( $BOARD->state == 2 ) {
+    
+            # additional player
+            $BOARD->add_player($user->id);
+            $USERS{$user->id} = $user;
+        }
         return { login_ok => $username };
     }
     else {

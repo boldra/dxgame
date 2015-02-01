@@ -51,7 +51,7 @@ is_board_deeply( \%expected_board, 'P2 added' );
 
 ################################################################################
 # Add third user:
-login( $players[2] );
+login( $players[3] );
 $expected_board{player_ids} = [qw<P1 P2 P3>];
 $expected_board{scores} = { P1 => 0, P2 => 0, P3 => 0 };
 is_board_deeply( \%expected_board, 'P3 added' );
@@ -114,7 +114,9 @@ sub login {
         my $res = $cb->($auth_req);
         is( $res->code, '200', "login as '$user->{username}' successful" );
 #        say "Login result:\n" . Dump( { req => $auth_req, res => $res } );
-        $user->{cookie} = $res->header('set-cookie');
+        my $cookie = $res->header('set-cookie');
+        $cookie =~ s{HttpOnly}{};
+        $user->{cookie} = $cookie;
       };
     
 }
