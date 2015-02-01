@@ -17,6 +17,9 @@ set plugins    => { 'Auth::Extensible' => { provider => 'Example' } };
 my $BOARD = DxGame::Board->new;
 my $DECK  = DxGame::Deck->new;
 my %USERS;
+our %RULES = (
+    hand_size => 5
+);
 
 get '/' => sub {
     { 300 => 'Not valid. Try getting /board.' };
@@ -61,14 +64,13 @@ get '/board' => sub {
 
 get '/hand' => needs login => sub {
     my $user = session('user');
-    return [ $user->hand ];
+    return $user->hand;
 };
 
 sub _deal_cards {
     for my $user ( values %USERS ) {
-        while ( $user->hand_size < 5) {
+        while ( $user->hand_size < $RULES{hand_size}) {
             my $card = $DECK->draw_card;
-            say STDERR "Player " . $user->id . " gets card '$card'";
             $user->add_card($card);
         }
     }
@@ -76,35 +78,35 @@ sub _deal_cards {
 
 put '/board/card/:card_id' => needs login => sub {
     my $user = session('user');
-    my $card = get_card( param('card_id') );
+    my $card_id = param('card_id');
     if ( $BOARD->state == 3 ) {
 
         # Storyteller
-        $user->remove_from_hand($card);
-        $BOARD->place_card( $user, $card );
+        $user->play_card($card_id);
+        $BOARD->increment_hidden_cards;
+        return $BOARD->as_summary_hashref;
     }
     elsif ( $BOARD->state == 4 ) {
 
         # Other players
-        if ( $user->has_card( $card->id ) ) {
+        if ( $user->has_card( $card_id ) ) {
             if ( $BOARD->has_card_from_user($user) ) {
                 return {
                     error => error(
-                            "You have already played card "
-                          . $card->id
-                          . " this round "
+                            "You have already played card $card_id this round.",
                     )
                 };
             }
             else {
-                $BOARD->play_card( $user, $card );
+                $BOARD->play_card( $user, $card_id );
                 if ( $BOARD->has_cards_from_all_players( values %USERS ) ) {
                     $BOARD->state = 5;    #waiting for players to make a bet.
                 }
+                return $BOARD->as_summary_hashref;
             }
         }
         else {
-            return { error => error( "You don't have card " . $card->id ) };
+            return { error => error( "You don't have card $card_id" ) };
         }
     }
     else {

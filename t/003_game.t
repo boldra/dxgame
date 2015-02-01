@@ -78,17 +78,17 @@ test_psgi
         $req->header( Cookie => $players[1]->{cookie} );
         my $res = $cb->( $req );
         my $struct = eval { $JSON->decode( $res->content ) };
-        $hands[0] = $struct;
+        $hands[1] = $struct;
         is( $res->code, '200', "Got hand @{$struct}" );
+        is( (scalar @{ $hands[1]} ), $DxGame::Server::RULES{hand_size}, "got five cards");
     };
-        
 
 ################################################################################
-# Put one card
-dx_put( '/board/card/');
+# Storyteller: play one card
+dx_put( '/board/card/'.$hands[1]->[0], $players[1] ); # play the first card
 
 ################################################################################
-# Tell a the story
+# Storyteller: tell a the story
 
 ################################################################################
 # Put other cards

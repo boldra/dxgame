@@ -60,6 +60,11 @@ has hidden_card_count => (
     is          => 'rw',
     isa         => 'Num',
     default     => 0,
+    traits      => [qw<Counter>],
+    handles => {
+        increment_hidden_cards => 'inc',
+        remove_hidden_cards => 'reset',
+    }
 );
 
 #>>>
