@@ -1,23 +1,46 @@
 <!DOCTYPE html>  
 <html><head>  
     <meta http-equiv='X-UA-Compatible' content='IE=edge' />  
-    <title>Hello World</title>  
+    <title>DX</title>  
   
     <script id='sap-ui-bootstrap' 
-        src='file:///C:/cygwin64/home/d061876/dev/dxgame/public/resources/sap-ui-core.js'  
+        src='resources/sap-ui-core.js'  
         data-sap-ui-theme='sap_bluecrystal'  
+        data-sap-ui-libs='sap.m'
         data-sap-ui-libs='sap.ui.commons'></script>   
   
 <script>  
-    var btn = new sap.ui.commons.Button({  
-        text:'Hello World',  
-        press:function(){alert('Hello!')}  
-    });  
-    btn.placeAt('content');  
+
+var app = new sap.m.App("myApp", {initialPage:"page1"});
+    
+var page1 = new sap.m.Page("page1", {
+  title: "Login Page",
+  content : [
+    new sap.m.Label({
+        text: 'username'
+    }),
+    new sap.m.InputType.Text({
+    }),
+    new sap.m.Label({
+        text: 'password'
+    }),
+    new sap.m.InputType.Text({
+    }),
+    //new sap.m.InputType.Password ({
+    //}),
+    new sap.m.Button( {
+        text : "login",
+        press : function() {
+            app.to("page2");
+        }
+    })
+  ]
+}); 
 </script>
 
 </head>
 <body class='sapUiBody'>
     <div id='content'></div>
+    <div id='uiArea'></div>
 </body>
 </html>
